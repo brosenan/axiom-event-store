@@ -7,19 +7,6 @@ import java.io.IOException;
  */
 public interface EventStore {
 	/**
-	 * Create an event object. The underlying representation can be implementation-specific.
-	 * 
-	 * @param id A unique event ID.
-	 * @param type The type of event.
-	 * @param key A non-unique key.
-	 * @param change 1 for a creation event, -1 for a deletion event.
-	 * @param data Opaque data associated with the key
-	 * @param removed Optional. If exists, this event represents a pair of events, where the second event has data = removed and change = -change.
-	 * @return An event object.
-	 */
-	Event event(String id, String type, byte[] key, int change, byte[] data, byte[] removed);
-	
-	/**
 	 * @return The number of shards in the event-store.
 	 */
 	int numShards();
@@ -50,13 +37,15 @@ public interface EventStore {
 	Iterable<String> getAssociation(String type) throws IOException;
 	
 	/**
-	 * Stores an event in one replica. The shard is determined according to the key.
+	 * Stores one or more events in one replica. The shard is determined according to the key.
+	 * All events are stored atomically, so they are either all visible, or none are.
 	 * 
-	 * @param event The event to be stored.
+	 * @param events The events to be stored.
 	 * @param replica The replica in which to store that event.
+	 * @param timestamp A representation of the time in which the event was stored.
 	 * @throws IOException If it cannot be guaranteed that the event has been stored.
 	 */
-	void store(Event event, int replica) throws IOException;
+	void store(Object[] events, int replica, long timestamp) throws IOException;
 	
 	/**
 	 * Returns all events of a certain type and key.
@@ -64,20 +53,22 @@ public interface EventStore {
 	 * @param type The type of the desired events.
 	 * @param key The key of the desired events.
 	 * @param replica The replica to query.
+	 * @param since Will show results with timestamp equal or greater this value.
 	 * @return An Iterable of all events matching the type and key. The object only implements iterator().
 	 * @throws IOException If the query was not successful.
 	 */
-	Iterable<Event> get(String type, byte[] key, int replica) throws IOException;
+	Iterable<Object> get(String type, byte[] key, int replica, long since) throws IOException;
 	
 	/**
 	 * Returns all events related to ev, in the sense that their keys have the same value, and their types are related to ev.getType().
 	 * 
 	 * @param ev The event for which we are interested in related events.
 	 * @param replica The replica to query.
+	 * @param since Will show results with timestamp equal or greater this value.
 	 * @return An Iterable, providing an iterator on the events.
 	 * @throws IOException If the query was not successful.
 	 */
-	Iterable<Event> getRelated(Event ev, int replica) throws IOException;
+	Iterable<Object> getRelated(Object ev, int replica, long since) throws IOException;
 	
 	/**
 	 * Returns all the keys stored in a replica of a shard.
@@ -100,4 +91,15 @@ public interface EventStore {
 	 * @throws IOException In case the activity went wrong.
 	 */
 	void maintenance(int shard, int replica) throws IOException;
+	
+	/**
+	 * Deletes all events of a certain type from the given shard and replica.
+	 * Also removes associations of that type.
+	 * 
+	 * @param type The type to be removed.
+	 * @param shard The shard in which to perform this removal.
+	 * @param replica The replica in which to perform this removal.
+	 * @throws IOException In case something goes wrong.
+	 */
+	void pruneType(String type, int shard, int replica) throws IOException;
 }
