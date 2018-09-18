@@ -48,7 +48,7 @@ public interface EventStore {
 	void store(Object[] events, int replica, long timestamp) throws IOException;
 	
 	/**
-	 * Returns all events of a certain type and key.
+	 * Returns all events of a certain type and key. The last element may be a Continuation instance, indicating there are more events to be retrieved.
 	 * 
 	 * @param type The type of the desired events.
 	 * @param key The key of the desired events.
@@ -60,7 +60,8 @@ public interface EventStore {
 	Iterable<Object> get(String type, byte[] key, int replica, long since) throws IOException;
 	
 	/**
-	 * Returns all events related to ev, in the sense that their keys have the same value, and their types are related to ev.getType().
+	 * Returns all events related to ev, in the sense that their keys have the same value, and their types are associated with the returned events' types.
+	 * The last element may be a Continuation instance, indicating there are more events to be retrieved.
 	 * 
 	 * @param ev The event for which we are interested in related events.
 	 * @param replica The replica to query.
@@ -69,6 +70,18 @@ public interface EventStore {
 	 * @throws IOException If the query was not successful.
 	 */
 	Iterable<Object> getRelated(Object ev, int replica, long since) throws IOException;
+	
+	/**
+	 * After get() or getRelated() have returned a Continuation, 
+	 * this function takes the continuation's binary representation (the one returned by serialize()), 
+	 * and provides more events. Here too, the last element can be a Continuation, 
+	 * in which case a further call to more() with its serialization can be made to retrieve further events.
+	 * 
+	 * @param continuation
+	 * @return
+	 * @throws IOException
+	 */
+	Iterable<Object> more(byte[] continuation) throws IOException;
 	
 	/**
 	 * Returns all the keys stored in a replica of a shard.
