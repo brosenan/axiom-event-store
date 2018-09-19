@@ -31,10 +31,12 @@ public interface EventStore {
 	 * Returns the types associated with the given type.
 	 * 
 	 * @param type The type for which we fetch the associations.
+	 * @param shard The shard in which to fetch associations.
+	 * @param replica The replica in which to fetch associations.
 	 * @return All the types that were associated with type. Regardless of whether they were given in the first or second position. The returned Iterable only provides a regular Iterator.
 	 * @throws IOException If associations cannot be fetched.
 	 */
-	Iterable<String> getAssociation(String type) throws IOException;
+	Iterable<String> getAssociation(String type, int shard, int replica) throws IOException;
 	
 	/**
 	 * Stores one or more events in one replica. The shard is determined according to the key.
@@ -48,10 +50,11 @@ public interface EventStore {
 	void store(Object[] events, int replica, long timestamp) throws IOException;
 	
 	/**
-	 * Returns all events of a certain type and key. The last element may be a Continuation instance, indicating there are more events to be retrieved.
+	 * Returns all events of a certain type and key. The last element may be a Continuation instance, 
+	 * indicating there are more events to be retrieved.
 	 * 
 	 * @param type The type of the desired events.
-	 * @param key The key of the desired events.
+	 * @param key The key of the desired events, as retrieved by scanKeys().
 	 * @param replica The replica to query.
 	 * @param since Will show results with timestamp equal or greater this value.
 	 * @return An Iterable of all events matching the type and key. The object only implements iterator().
@@ -85,6 +88,9 @@ public interface EventStore {
 	
 	/**
 	 * Returns all the keys stored in a replica of a shard.
+	 * The keys returned by this function are not necessarily the values returned by domain.key(), 
+	 * but rather some values that correspond to them, e.g., a hash value.
+	 * These values must be acceptable by get().
 	 * 
 	 * @param shard The shard to be queried.
 	 * @param replica The replica to be queried.
