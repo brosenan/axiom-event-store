@@ -33,7 +33,7 @@ public interface EventStore {
 	 * @param type The type for which we fetch the associations.
 	 * @param shard The shard in which to fetch associations.
 	 * @param replica The replica in which to fetch associations.
-	 * @return All the types that were associated with type. Regardless of whether they were given in the first or second position. The returned Iterable only provides a regular Iterator.
+	 * @return All the types that were associated with type. Regardless of whether they were given in the first or second position.
 	 * @throws IOException If associations cannot be fetched.
 	 */
 	Iterable<String> getAssociation(String type, int shard, int replica) throws IOException;
@@ -41,6 +41,7 @@ public interface EventStore {
 	/**
 	 * Stores one or more events in one replica. The shard is determined according to the key.
 	 * All events are stored atomically, so they are either all visible, or none are.
+	 * All events are assumed to have the same key value.
 	 * 
 	 * @param events The events to be stored.
 	 * @param replica The replica in which to store that event.
@@ -57,10 +58,11 @@ public interface EventStore {
 	 * @param key The key of the desired events, as retrieved by scanKeys().
 	 * @param replica The replica to query.
 	 * @param since Will show results with timestamp equal or greater this value.
+	 * @param now The current time. Events for which the TTL is before that time are not returned.
 	 * @return An Iterable of all events matching the type and key. The object only implements iterator().
 	 * @throws IOException If the query was not successful.
 	 */
-	Iterable<Object> get(String type, byte[] key, int replica, long since) throws IOException;
+	Iterable<Object> get(String type, byte[] key, int replica, long since, long now) throws IOException;
 	
 	/**
 	 * Returns all events related to ev, in the sense that their keys have the same value, and their types are associated with the returned events' types.
@@ -69,10 +71,11 @@ public interface EventStore {
 	 * @param ev The event for which we are interested in related events.
 	 * @param replica The replica to query.
 	 * @param since Will show results with timestamp equal or greater this value.
+	 * @param now The current time. Events for which the TTL is before that time are not returned.
 	 * @return An Iterable, providing an iterator on the events.
 	 * @throws IOException If the query was not successful.
 	 */
-	Iterable<Object> getRelated(Object ev, int replica, long since) throws IOException;
+	Iterable<Object> getRelated(Object ev, int replica, long since, long now) throws IOException;
 	
 	/**
 	 * After get() or getRelated() have returned a Continuation, 
@@ -80,11 +83,12 @@ public interface EventStore {
 	 * and provides more events. Here too, the last element can be a Continuation, 
 	 * in which case a further call to more() with its serialization can be made to retrieve further events.
 	 * 
-	 * @param continuation
-	 * @return
-	 * @throws IOException
+	 * @param continuation An opaque representation of the continuation (returned by its serialize() method).
+	 * @param replica The replica in which to perform the query
+	 * @return An Iterable of events, in which the last one can be a Continuation.
+	 * @throws IOException In case the query was not successful.
 	 */
-	Iterable<Object> more(byte[] continuation) throws IOException;
+	Iterable<Object> more(byte[] continuation, int replica) throws IOException;
 	
 	/**
 	 * Returns all the keys stored in a replica of a shard.
@@ -107,9 +111,10 @@ public interface EventStore {
 	 * 
 	 * @param shard The shard in which to operate.
 	 * @param replica The replica on which to operate.
+	 * @param now The time representation for which this operation is performed.
 	 * @throws IOException In case the activity went wrong.
 	 */
-	void maintenance(int shard, int replica) throws IOException;
+	void maintenance(int shard, int replica, long now) throws IOException;
 	
 	/**
 	 * Deletes all events of a certain type from the given shard and replica.

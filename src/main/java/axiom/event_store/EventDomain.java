@@ -38,6 +38,12 @@ public interface EventDomain {
 	byte[] body(Object event);
 	
 	/**
+	 * @param event An opaque event object
+	 * @return The event's TTL (absolute time) or null if not assigned.
+	 */
+	Long ttl(Object event);
+	
+	/**
 	 * Serialize the event into binary format.
 	 * @param event An opaque event object
 	 * @return The event, represented as binary.
